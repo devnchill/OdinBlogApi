@@ -2,9 +2,6 @@ import type { NextFunction, Request, Response } from "express";
 import prisma from "../db/prismaClient.mjs";
 import { Prisma } from "../../generated/prisma/client.js";
 
-interface AuthRequest extends Request {
-  user?: { id: number; email?: string };
-}
 export async function getAllPosts(
   _req: Request,
   res: Response,
@@ -16,7 +13,7 @@ export async function getAllPosts(
         isPublished: true,
       },
     });
-    return res
+    res
       .status(200)
       .json({ success: true, msg: "sharing all post", posts: allPosts });
   } catch (err) {
@@ -50,7 +47,7 @@ export async function getPost(
         .status(400)
         .json({ success: false, message: "postId must be a number" });
     }
-    const post = await prisma.post.findUnique({
+    const post = await prisma.post.findFirst({
       where: { id, isPublished: true },
     });
     if (!post) {
@@ -81,20 +78,28 @@ export async function deletePost(
   try {
     const { postId } = req.params;
     if (!postId) {
-      return res.status(400).json({ message: "postId not provided" });
+      return res
+        .status(400)
+        .json({ success: false, message: "postId not provided" });
     }
     const id = parseInt(postId, 10);
     if (Number.isNaN(id)) {
-      return res.status(400).json({ message: "postId must be a number" });
+      return res
+        .status(400)
+        .json({ success: false, message: "postId must be a number" });
     }
     await prisma.post.delete({ where: { id } });
-    return res.status(200).json({ msg: `deleted post with postId ${id}` });
+    return res
+      .status(200)
+      .json({ success: true, msg: `deleted post with postId ${id}` });
   } catch (err) {
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === "P2025"
     ) {
-      return res.status(404).json({ message: `Post not found` });
+      return res
+        .status(404)
+        .json({ success: false, message: `Post not found` });
     }
 
     console.error(err);
@@ -110,7 +115,7 @@ export async function deletePost(
 }
 
 export async function createPost(
-  req: AuthRequest,
+  req: Request,
   res: Response,
   _next: NextFunction,
 ) {
@@ -120,7 +125,7 @@ export async function createPost(
       return res.status(400).json({ success: false, message: "access denied" });
     }
     const authorId = req.user.id;
-    await prisma.post.create({
+    const newPost = await prisma.post.create({
       data: {
         title,
         content,
@@ -129,6 +134,9 @@ export async function createPost(
         authorId,
       },
     });
+    return res
+      .status(201)
+      .json({ success: true, post: newPost, message: "created new post" });
   } catch (err) {
     console.error(err);
     if (process.env.NODE_ENV === "development") {
@@ -150,15 +158,24 @@ export async function updatePost(
       .status(400)
       .json({ success: false, message: "postId not found" });
   const { postId } = req.params;
-  const { title } = req.body;
-  const { content } = req.body;
-  await prisma.post.update({
-    where: {
-      id: parseInt(postId),
-    },
-    data: {
-      title,
-      content,
-    },
-  });
+  const { title, content } = req.body;
+  try {
+    const updated = await prisma.post.update({
+      where: { id: parseInt(postId, 10) },
+      data: { title, content },
+    });
+    return res.status(200).json({ success: true, post: updated });
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2025"
+    ) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Post not found" });
+    }
+    return res
+      .status(500)
+      .json({ success: false, message: "internal server error" });
+  }
 }

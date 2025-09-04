@@ -2,6 +2,6 @@ import { JwtPayload } from "jsonwebtoken";
 
 declare module "express-serve-static-core" {
   interface Request {
-    user?: string | JwtPayload;
+    user?: { id: number; userName: string; role: string };
   }
 }

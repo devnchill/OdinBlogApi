@@ -8,15 +8,16 @@ import {
   getPost,
   updatePost,
 } from "../controller/postController.mjs";
+import authorOnly from "../auth/authorOnly.mjs";
 
 const postRouter = Router();
 
 postRouter.get("/", getAllPosts);
-postRouter.post("/", createPost);
+postRouter.post("/", authorOnly, createPost);
 
 postRouter.get("/:postId", getPost);
-postRouter.put("/:postId", updatePost);
-postRouter.delete("/:postId", deletePost);
+postRouter.put("/:postId", authorOnly, updatePost);
+postRouter.delete("/:postId", authorOnly, deletePost);
 
 postRouter.use("/:postId/comments", commentRouter);
 postRouter.use("/:postId/likes", likeRouter);

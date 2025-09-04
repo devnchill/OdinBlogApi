@@ -5,6 +5,7 @@ import {
   getAllComments,
   getComment,
 } from "../controller/commentController.mjs";
+import authorOnly from "../auth/authorOnly.mjs";
 
 const commentRouter = Router();
 

@@ -35,8 +35,7 @@ export async function addLike(
 ) {
   try {
     const { postId } = req.params;
-    const { userId } = req.body;
-    if (!postId || !userId)
+    if (!postId || !req.user || !req.user.id)
       return res
         .status(400)
         .json({ success: false, message: "postId and userId required" });
@@ -44,7 +43,7 @@ export async function addLike(
     const like = await prisma.like.create({
       data: {
         postId: parseInt(postId, 10),
-        userId: parseInt(userId, 10),
+        userId: req.user.id,
       },
     });
 

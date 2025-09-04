@@ -88,6 +88,14 @@ export async function deletePost(
         .status(400)
         .json({ success: false, message: "postId must be a number" });
     }
+    const post = await prisma.post.findUnique({
+      where: {
+        id,
+      },
+    });
+    if (!req.user || req.user.id !== post?.authorId)
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+
     await prisma.post.delete({ where: { id } });
     return res
       .status(200)
@@ -158,10 +166,19 @@ export async function updatePost(
       .status(400)
       .json({ success: false, message: "postId not found" });
   const { postId } = req.params;
+  const id = parseInt(postId, 10);
+  const post = await prisma.post.findUnique({
+    where: {
+      id,
+    },
+  });
+  if (!req.user || req.user.id !== post?.authorId)
+    return res.status(403).json({ success: false, message: "Unauthorized" });
+
   const { title, content } = req.body;
   try {
     const updated = await prisma.post.update({
-      where: { id: parseInt(postId, 10) },
+      where: { id: post.id },
       data: { title, content },
     });
     return res.status(200).json({ success: true, post: updated });

@@ -21,12 +21,10 @@ export async function getAllComments(
     return res.status(200).json({ success: true, comments });
   } catch (err: unknown) {
     console.error(err);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: err instanceof Error ? err.message : String(err),
-      });
+    return res.status(500).json({
+      success: false,
+      message: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 
@@ -55,12 +53,10 @@ export async function getComment(
     return res.status(200).json({ success: true, comment });
   } catch (err: unknown) {
     console.error(err);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: err instanceof Error ? err.message : String(err),
-      });
+    return res.status(500).json({
+      success: false,
+      message: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 
@@ -73,12 +69,10 @@ export async function createComment(
     const { postId } = req.params;
     const { userId, content } = req.body;
     if (!postId || !userId || !content)
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "postId, userId and content required",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "postId, userId and content required",
+      });
 
     const comment = await prisma.comment.create({
       data: {
@@ -93,12 +87,10 @@ export async function createComment(
       .json({ success: true, message: "Comment created", comment });
   } catch (err: unknown) {
     console.error(err);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: err instanceof Error ? err.message : String(err),
-      });
+    return res.status(500).json({
+      success: false,
+      message: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 
@@ -108,15 +100,32 @@ export async function deleteComment(
   _next: NextFunction,
 ) {
   try {
+    if (!req.user || !req.user.id) {
+      return res
+        .status(401)
+        .json({ success: false, message: "User not found" });
+    }
+
     const { commentId } = req.params;
-    if (!commentId)
+    if (!commentId) {
       return res
         .status(400)
         .json({ success: false, message: "commentId not provided" });
+    }
 
-    await prisma.comment.delete({
-      where: { id: parseInt(commentId, 10) },
-    });
+    const id = parseInt(commentId, 10);
+    const comment = await prisma.comment.findUnique({ where: { id } });
+    if (!comment) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Comment not found" });
+    }
+
+    if (comment.userId !== req.user.id && req.user.role !== "AUTHOR") {
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+
+    await prisma.comment.delete({ where: { id } });
 
     return res.status(200).json({ success: true, message: "Comment deleted" });
   } catch (err: unknown) {
@@ -126,11 +135,9 @@ export async function deleteComment(
         .json({ success: false, message: "Comment not found" });
     }
     console.error(err);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: err instanceof Error ? err.message : String(err),
-      });
+    return res.status(500).json({
+      success: false,
+      message: err instanceof Error ? err.message : String(err),
+    });
   }
 }
